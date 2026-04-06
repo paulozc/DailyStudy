@@ -17,7 +17,7 @@ public class UsuarioController {
     @Autowired
     private UsuarioService usuarioService;
 
-    @PostMapping("/registro")
+    @PostMapping("/registro") // Mapeia a requisicao HTTP para criar um novo usuario no banco de dados
     public ResponseEntity<Usuario> registro(@RequestBody RegistroUsuario dto) {
         Usuario newUsuario = usuarioService.RegistroUsuario(dto);
 
