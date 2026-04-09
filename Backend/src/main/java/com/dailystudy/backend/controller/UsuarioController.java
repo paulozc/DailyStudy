@@ -1,6 +1,6 @@
 package com.dailystudy.backend.controller;
 
-import com.dailystudy.backend.dto.RegistroUsuario;
+import com.dailystudy.backend.dto.UsuarioRegistro;
 import com.dailystudy.backend.model.Usuario;
 import com.dailystudy.backend.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +18,8 @@ public class UsuarioController {
     private UsuarioService usuarioService;
 
     @PostMapping("/registro") // Mapeia a requisicao HTTP para criar um novo usuario no banco de dados
-    public ResponseEntity<Usuario> registro(@RequestBody RegistroUsuario dto) {
-        Usuario newUsername = usuarioService.RegistroUsuario(dto);
+    public ResponseEntity<Usuario> registro(@RequestBody UsuarioRegistro dto) {
+        Usuario newUsername = usuarioService.registroUsuario(dto);
 
         return ResponseEntity.ok(newUsername);
 
