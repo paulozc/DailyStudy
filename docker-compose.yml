@@ -2,11 +2,11 @@ services:
   mongo:
     image: mongo:7
     healthcheck:
-    test: ["CMD-SHELL", "mongosh --quiet -u \"$$MONGO_INITDB_ROOT_USERNAME\" -p \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --eval 'db.adminCommand(\"ping\")'"]
-    interval: 10s
-    timeout: 5s
-    retries: 5
-    start_period: 20s
+      test: ["CMD-SHELL", "mongosh --quiet -u \"$$MONGO_INITDB_ROOT_USERNAME\" -p \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --eval 'db.adminCommand(\"ping\")'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
@@ -23,11 +23,11 @@ services:
   postgres:
     image: postgres:17
     healthcheck:
-    test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
-    interval: 10s
-    timeout: 5s
-    retries: 5
-    start_period: 10s
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${PG_DB}
@@ -39,7 +39,7 @@ services:
       - app-network
 
   backend:
-    profiles: ["container-backend"] # agora temos que deixar explicito para que rode o container do backend
+    profiles: [container-backend] # agora temos que deixar explicito para que rode o container do backend
     build:
       context: ./Backend
     restart: unless-stopped
@@ -59,9 +59,6 @@ services:
   
   nginx:
     restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
     networks:
       - app-network
 
