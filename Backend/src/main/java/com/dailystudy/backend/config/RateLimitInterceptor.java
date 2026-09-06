@@ -7,9 +7,12 @@ import io.github.bucket4j.ConsumptionProbe;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class RateLimitInterceptor implements HandlerInterceptor {
@@ -40,6 +43,8 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
         long secondsAwait = probe.getNanosToWaitForRefill() / 1_000_000_000;
         response.addHeader("Retry-After", String.valueOf(secondsAwait));
+
+        log.warn("Rate limit atingido: ip={}, path={}, aguardar={}s", ip, path, secondsAwait);
 
         throw new RateLimitException("Muitas tentativas. Tente novamente em " + secondsAwait + "segundos");
     }

@@ -1,11 +1,13 @@
 package com.dailystudy.backend.service;
 
 import com.dailystudy.backend.dto.*;
+import com.dailystudy.backend.exception.PermissaoNegadaException;
 import com.dailystudy.backend.model.Post;
 import com.dailystudy.backend.model.Usuario;
 import com.dailystudy.backend.repository.*;
 import com.dailystudy.backend.util.CursorCodec;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,6 +15,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PostService {
@@ -30,16 +33,23 @@ public class PostService {
         post.setAutorId(autorId);
         post.setDataCriacao(LocalDateTime.now());
 
-        return postRepository.save(post);
+        Post salvo = postRepository.save(post);
+        log.info("Post criado: id{}, autorId={}", salvo.getId(), autorId);
+
+        return salvo;
     }
 
     public Post editarPost(String id, EditarPostDTO dto, Long autorId){
 
         Post post = postRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Post não encontrado"));
+                .orElseThrow(() -> {
+                    log.warn("Edicao falhou: post não encontrado (id={})", id);
+                    return new RuntimeException("Post não encontrado");
+                });
 
         if(!post.getAutorId().equals(autorId)){
-            throw new RuntimeException("Não pode editar esse post");
+            log.warn("Edicao falhou: autorId={} tentou editar post de outro usuario (postId={}, donoReal{})", autorId, id, post.getAutorId());
+            throw new PermissaoNegadaException("Não pode editar esse post");
         }
 
         post.setContent(dto.content());
@@ -51,18 +61,26 @@ public class PostService {
 
     public void deletarPost(String id, Long autorId){
         Post post = postRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Post não encontrado"));
+                .orElseThrow(() -> {
+                    log.warn("Deletar post falhou: post não encontrado (id={})", id);
+                    return new RuntimeException("Post não encontrado");
+                });
 
         if (!post.getAutorId().equals(autorId)){
-            throw new RuntimeException("Não pode deletar esse post");
+            log.warn("Deletar post falhou: autorId={} tentou deletar post de outro usuário (autorId={}, donoReal={})", autorId, id, post.getAutorId());
+            throw new PermissaoNegadaException("Não pode deletar esse post");
         }
 
         postRepository.deleteById(id);
+        log.info("Post deletado: id={}, autorId={}", id, autorId);
     }
 
     public Post criarComentario(String comentPostId, ComentarioDTO dto, Long autorId){
     postRepository.findById(comentPostId)
-            .orElseThrow(() -> new RuntimeException("Post não encontrado"));
+            .orElseThrow(() -> {
+                log.warn("Comentário falhou: post não encontrado (id={})", comentPostId);
+                return new RuntimeException("Post não encontrado");
+            });
 
     Post comentario = new Post();
     comentario.setContent(dto.content());
