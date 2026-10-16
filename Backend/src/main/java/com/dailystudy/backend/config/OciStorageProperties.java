@@ -6,5 +6,5 @@ import org.springframework.validation.annotation.Validated;
 
 @Validated
 @ConfigurationProperties("oci.storage")
-public record OciStorageProperties(@NotBlank String configFile, @NotBlank String profile, @NotBlank String namespace, @NotBlank String bucket) {
+public record OciStorageProperties(@NotBlank String configFile, @NotBlank String profile, @NotBlank String namespace, @NotBlank String bucket, @NotBlank String publicBaseUrl) {
 }
