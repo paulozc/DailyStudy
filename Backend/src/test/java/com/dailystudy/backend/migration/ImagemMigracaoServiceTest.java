@@ -64,4 +64,38 @@ public class ImagemMigracaoServiceTest {
         assertThrows(InvalidImageException.class, () -> service.migrar(naoEhImagem));
         verifyNoInteractions(storage);
     }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {
+            "   ",
+            "https://objectstorage.sa-saopaulo-1.oraclecloud.com/n/grnkbnebxpin/b/dailystudy-media-dev/o/3f2b8c1e-5a7d-4e9f-8b6a-1c2d3e4f5a6b"
+    })
+    void precisaMigrar_valorVazioOuJaMigrado_devolveFalse(String valor) {
+        assertFalse(service.precisaMigrar(valor));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            PNG_1X1,
+            "http://inseguro.test/foto.png"
+    })
+    void precisaMigrar_dataUriOuValorDesconhecido_devolveTrue(String valor) {
+        assertTrue(service.precisaMigrar(valor));
+    }
+
+    @Test
+    void validar_dataUriValida_naoLancaENaoTocaNoBucket() {
+        assertDoesNotThrow(() -> service.validar(PNG_1X1));
+        verifyNoInteractions(storage);
+    }
+
+    @Test
+    void validar_bytesQueNaoSaoImagem_lancaExcecaoENaoTocaNoBucket() {
+        String naoEhImagem = "data:image/png;base64," +
+                Base64.getEncoder().encodeToString("isto não é um png".getBytes(StandardCharsets.UTF_8));
+
+        assertThrows(InvalidImageException.class, () -> service.validar(naoEhImagem));
+        verifyNoInteractions(storage);
+    }
 }

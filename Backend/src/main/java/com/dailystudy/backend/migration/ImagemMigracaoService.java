@@ -11,18 +11,33 @@ import java.util.Optional;
 public class ImagemMigracaoService {
 
     private final OciStorageService storage;
+    private record ImagemLida(byte[] bytes, String contentType){}
 
     public ImagemMigracaoService(OciStorageService storage) {
         this.storage = storage;
     }
 
     public Optional<String> migrar(String valorAtual) {
-        if (valorAtual == null || valorAtual.isBlank() || valorAtual.startsWith("https://")) {
+        if (!precisaMigrar(valorAtual)) {
             return Optional.empty();
         }
-        byte[] bytes = DataUriDecoder.decodificar(valorAtual);
-        String contentType = ImageValidator.validar(bytes);
-        String url = storage.upload(new ByteArrayInputStream(bytes), bytes.length, contentType);
+        ImagemLida imagem = lerImagem(valorAtual);
+        String url = storage.upload(
+                new ByteArrayInputStream(imagem.bytes()), imagem.bytes().length, imagem.contentType());
         return Optional.of(url);
+    }
+
+    public boolean precisaMigrar(String valor) {
+            return valor != null && !valor.isBlank() && !valor.startsWith("https://");
+    }
+
+    public void validar(String valor) {
+        lerImagem(valor);
+    }
+
+    private ImagemLida lerImagem(String valor) {
+        byte[] bytes = DataUriDecoder.decodificar(valor);
+        String contentType = ImageValidator.validar(bytes);
+        return new ImagemLida(bytes, contentType);
     }
 }
