@@ -136,4 +136,28 @@ public class MigracaoExecutorTest {
 
         verify(usuarioRepository, never()).save(any());
     }
+
+    @Test
+    void migrarUsuarios_simulacao_falhaNoBannerEhRegistradaComONomeDoCampo() {
+        String invalida = "data:image/png;base64,imagem-quebrada";
+
+        Usuario usuario = new Usuario();
+        usuario.setId(5L);
+        usuario.setImg_perfil(PNG_1X1);
+        usuario.setBanner_perfil(invalida);
+
+        when(usuarioRepository.findAll()).thenReturn(List.of(usuario));
+        when(imagemService.precisaMigrar(PNG_1X1)).thenReturn(true);
+        when(imagemService.precisaMigrar(invalida)).thenReturn(true);
+        doNothing().when(imagemService).validar(PNG_1X1);
+        doThrow(new IllegalArgumentException("Data URI inválida")).when(imagemService).validar(invalida);
+
+        MigracaoRelatorio relatorio = executor.migrarUsuarios(false);
+
+        assertEquals(1, relatorio.getMigrados());
+        assertEquals(1, relatorio.getFalhas().size());
+        assertEquals("usuario 5 / banner_perfil: Data URI inválida", relatorio.getFalhas().get(0));
+        verify(imagemService, never()).migrar(any());
+        verify(usuarioRepository, never()).save(any());
+    }
 }
