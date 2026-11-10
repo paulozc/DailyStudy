@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -88,5 +89,51 @@ public class MigracaoExecutorTest {
         assertEquals(urlNova, usuario.getImg_perfil());
         verify(usuarioRepository).save(usuario);
         verify(imagemService, never()).validar(any());
+    }
+
+    @Test
+    void migrarUsuarios_aplicar_falhaEmUmCampoNaoInterrompeOsDemais() {
+        String invalida = "data:image/png;base64,imagem-quebrada";
+        String urlNova = "https://exemplo.test/o/abc";
+
+        Usuario comProblema = new Usuario();
+        comProblema.setId(1L);
+        comProblema.setImg_perfil(invalida);
+
+        Usuario saudavel = new Usuario();
+        saudavel.setId(2L);
+        saudavel.setImg_perfil(PNG_1X1);
+
+        when(usuarioRepository.findAll()).thenReturn(List.of(comProblema, saudavel));
+        when(imagemService.precisaMigrar(invalida)).thenReturn(true);
+        when(imagemService.precisaMigrar(PNG_1X1)).thenReturn(true);
+        when(imagemService.precisaMigrar(null)).thenReturn(false);
+        when(imagemService.migrar(invalida)).thenThrow(new IllegalArgumentException("Data URI inválida"));
+        when(imagemService.migrar(PNG_1X1)).thenReturn(Optional.of(urlNova));
+
+        MigracaoRelatorio relatorio = executor.migrarUsuarios(true);
+
+        assertEquals(1, relatorio.getMigrados());
+        assertEquals(1, relatorio.getFalhas().size());
+        assertEquals("usuario 1 / img_perfil: Data URI inválida", relatorio.getFalhas().get(0));
+        assertEquals(invalida, comProblema.getImg_perfil());
+        assertEquals(urlNova, saudavel.getImg_perfil());
+        verify(usuarioRepository, never()).save(comProblema);
+        verify(usuarioRepository).save(saudavel);
+    }
+
+    @Test
+    void migrarUsuarios_aplicar_falhaDeUploadNaoEhEngolida() {
+        Usuario usuario = new Usuario();
+        usuario.setId(1L);
+        usuario.setImg_perfil(PNG_1X1);
+
+        when(usuarioRepository.findAll()).thenReturn(List.of(usuario));
+        when(imagemService.precisaMigrar(PNG_1X1)).thenReturn(true);
+        when(imagemService.migrar(PNG_1X1)).thenThrow(new IllegalStateException("bucket indisponível"));
+
+        assertThrows(IllegalStateException.class, () -> executor.migrarUsuarios(true));
+
+        verify(usuarioRepository, never()).save(any());
     }
 }
