@@ -9,6 +9,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -59,5 +61,32 @@ public class MigracaoExecutorTest {
 
         assertEquals(0, relatorio.getMigrados());
         assertEquals(2, relatorio.getIgnorados());
+    }
+
+    @Test
+    void migrarUsuarios_aplicar_sobeEGravaAUrlNova() {
+        Usuario usuario = new Usuario();
+        usuario.setId(3L);
+        usuario.setImg_perfil(PNG_1X1);
+        String urlNova = "https://exemplo.test/o/abc";
+        when(usuarioRepository.findAll()).thenReturn(List.of(usuario));
+        when(imagemService.precisaMigrar(PNG_1X1)).thenReturn(true);
+        when(imagemService.precisaMigrar(null)).thenReturn(false);
+        when(imagemService.migrar(PNG_1X1)).thenReturn(Optional.of(urlNova));
+
+        AtomicReference<String> fotoNoSave = new AtomicReference<>();
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocacao -> {
+            Usuario salvo = invocacao.getArgument(0);
+            fotoNoSave.set(salvo.getImg_perfil());
+            return salvo;
+        });
+
+        MigracaoRelatorio relatorio = executor.migrarUsuarios(true);
+
+        assertEquals(1, relatorio.getMigrados());
+        assertEquals(urlNova, fotoNoSave.get());
+        assertEquals(urlNova, usuario.getImg_perfil());
+        verify(usuarioRepository).save(usuario);
+        verify(imagemService, never()).validar(any());
     }
 }
