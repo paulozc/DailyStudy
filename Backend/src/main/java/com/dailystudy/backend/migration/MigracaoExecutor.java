@@ -11,11 +11,11 @@ import java.util.Optional;
 public class MigracaoExecutor {
 
     private final UsuarioRepository usuarioRepository;
-    private final ImagemMigracaoService imagemService;
+    private final CampoImagemMigracao migrador;
 
     public MigracaoExecutor(UsuarioRepository usuarioRepository, ImagemMigracaoService imagemService) {
         this.usuarioRepository = usuarioRepository;
-        this.imagemService = imagemService;
+        this.migrador = new CampoImagemMigracao(imagemService);
     }
 
     public MigracaoRelatorio migrarUsuarios(boolean aplicar) {
@@ -23,8 +23,8 @@ public class MigracaoExecutor {
         MigracaoRelatorio relatorio = new MigracaoRelatorio();
 
         for (Usuario usuario : usuarioRepository.findAll()) {
-            Optional<String> novaFoto = processarCampo(usuario.getImg_perfil(), aplicar, relatorio, "usuario " + usuario.getId() + " / img_perfil");
-            Optional<String> novoBanner = processarCampo(usuario.getBanner_perfil(), aplicar, relatorio, "usuario " + usuario.getId() + " / banner_perfil");
+            Optional<String> novaFoto = migrador.processarCampo(usuario.getImg_perfil(), aplicar, relatorio, "usuario " + usuario.getId() + " / img_perfil");
+            Optional<String> novoBanner = migrador.processarCampo(usuario.getBanner_perfil(), aplicar, relatorio, "usuario " + usuario.getId() + " / banner_perfil");
 
             novaFoto.ifPresent(usuario::setImg_perfil);
             novoBanner.ifPresent(usuario::setBanner_perfil);
@@ -34,27 +34,5 @@ public class MigracaoExecutor {
             }
         }
         return relatorio;
-    }
-
-    private Optional<String> processarCampo(String valor, boolean aplicar, MigracaoRelatorio relatorio, String referencia) {
-        if (!imagemService.precisaMigrar(valor)) {
-            relatorio.registrarIgnorado();
-            return Optional.empty();
-        }
-        try {
-            if (!aplicar) {
-                imagemService.validar(valor);
-                relatorio.registrarMigrado();
-                return Optional.empty();
-            }
-
-            String url = imagemService.migrar(valor).orElseThrow();
-            relatorio.registrarMigrado();
-            return Optional.of(url);
-
-        } catch (IllegalArgumentException | InvalidImageException e) {
-            relatorio.registrarFalha(referencia, e.getMessage());
-            return Optional.empty();
-        }
     }
 }
